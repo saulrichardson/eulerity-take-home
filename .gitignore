@@ -1,0 +1,43 @@
+.DS_Store
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Maven and build output
+target/
+build/
+out/
+*.class
+.playwright-mcp/
+
+# Logs
+*.log
+
+# Spring Initializr generated help
+HELP.md
+
+# Maven wrapper generated jar, if wrapper distribution mode changes later
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE files
+.idea/
+*.iws
+*.iml
+*.ipr
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+.apt_generated/
+.vscode/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
