@@ -25,6 +25,7 @@ import com.eulerity.taskmanager.ai.AiTaskInvalidOutputException;
 import com.eulerity.taskmanager.ai.AiTaskSuggestionPrompt;
 import com.eulerity.taskmanager.ai.TaskAiClient;
 import com.eulerity.taskmanager.ai.TaskAiTokenCounter;
+import com.eulerity.taskmanager.ai.dates.AiDueDateSemanticValidator;
 import com.eulerity.taskmanager.config.OpenAiProperties;
 import com.eulerity.taskmanager.dto.TaskSuggestionResponse;
 import com.eulerity.taskmanager.model.TaskPriority;
@@ -49,14 +50,14 @@ class TaskSuggestionServiceTest {
 	void setUp() {
 		this.openAiProperties = new OpenAiProperties();
 		this.taskSuggestionService = new TaskSuggestionService(this.taskAiClient, this.tokenCounter,
-				this.openAiProperties, fixedClock());
+				this.openAiProperties, fixedClock(), new AiDueDateSemanticValidator());
 		lenient().when(this.tokenCounter.countTaskSuggestionInputTokens(any(AiTaskSuggestionPrompt.class)))
 			.thenReturn(100L);
 	}
 
 	@Test
 	void suggestTaskReturnsCompleteSuggestion() {
-		TaskSuggestionResponse suggestion = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 29));
+		TaskSuggestionResponse suggestion = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 28));
 		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday", null)))
 			.thenReturn(suggestion);
 
@@ -75,9 +76,9 @@ class TaskSuggestionServiceTest {
 
 	@Test
 	void suggestTaskRetriesOnceWhenSuggestionIsIncomplete() {
-		TaskSuggestionResponse incomplete = new TaskSuggestionResponse(null, "Missing title", LocalDate.of(2026, 5, 29),
+		TaskSuggestionResponse incomplete = new TaskSuggestionResponse(null, "Missing title", LocalDate.of(2026, 5, 28),
 				TaskPriority.MEDIUM, TaskStatus.TODO);
-		TaskSuggestionResponse complete = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 29));
+		TaskSuggestionResponse complete = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 28));
 		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday", null)))
 			.thenReturn(incomplete);
 		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday", "title was missing")))
@@ -95,7 +96,7 @@ class TaskSuggestionServiceTest {
 
 	@Test
 	void suggestTaskRetriesOnceWhenClientMarksOutputInvalid() {
-		TaskSuggestionResponse complete = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 29));
+		TaskSuggestionResponse complete = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 28));
 		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday", null)))
 			.thenThrow(new AiTaskInvalidOutputException("invalid model output"));
 		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday", "invalid model output")))
@@ -105,6 +106,86 @@ class TaskSuggestionServiceTest {
 			.suggestTask("submit the quarterly report before Friday");
 
 		assertThat(response).isEqualTo(complete);
+	}
+
+	@Test
+	void suggestTaskRetriesOnceWhenClientRejectsInvalidDueDateRule() {
+		TaskSuggestionResponse complete = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 28));
+		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday", null)))
+			.thenThrow(new AiTaskInvalidOutputException(
+					"AI response dueDateRule was not a supported date-rule expression"));
+		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday",
+				"AI response dueDateRule was not a supported date-rule expression")))
+			.thenReturn(complete);
+
+		TaskSuggestionResponse response = this.taskSuggestionService
+			.suggestTask("submit the quarterly report before Friday");
+
+		assertThat(response).isEqualTo(complete);
+	}
+
+	@Test
+	void suggestTaskRetriesOnceWhenExplicitNextCurrentWeekdayResolvesToToday() {
+		String request = "follow up with finance next Monday";
+		String failure = "dueDate resolved to 2026-05-25 for explicit next MONDAY; "
+				+ "use next(MONDAY) so it resolves to 2026-06-01";
+		TaskSuggestionResponse todaySuggestion = suggestion("Follow up with finance", CURRENT_DATE);
+		TaskSuggestionResponse correctedSuggestion = suggestion("Follow up with finance", LocalDate.of(2026, 6, 1));
+		when(this.taskAiClient.suggestTask(prompt(request, null))).thenReturn(todaySuggestion);
+		when(this.taskAiClient.suggestTask(prompt(request, failure))).thenReturn(correctedSuggestion);
+
+		TaskSuggestionResponse response = this.taskSuggestionService.suggestTask(request);
+
+		assertThat(response).isEqualTo(correctedSuggestion);
+		verify(this.tokenCounter).countTaskSuggestionInputTokens(prompt(request, null));
+		verify(this.tokenCounter).countTaskSuggestionInputTokens(prompt(request, failure));
+	}
+
+	@Test
+	void suggestTaskRetriesOnceWhenExplicitNextWeekdayResolvesToCurrentWeek() {
+		String request = "send the client update next Friday";
+		String failure = "dueDate resolved to 2026-05-29 for explicit next FRIDAY; "
+				+ "use next(FRIDAY) so it resolves to 2026-06-05";
+		TaskSuggestionResponse currentWeekSuggestion = suggestion("Send client update", LocalDate.of(2026, 5, 29));
+		TaskSuggestionResponse correctedSuggestion = suggestion("Send client update", LocalDate.of(2026, 6, 5));
+		when(this.taskAiClient.suggestTask(prompt(request, null))).thenReturn(currentWeekSuggestion);
+		when(this.taskAiClient.suggestTask(prompt(request, failure))).thenReturn(correctedSuggestion);
+
+		TaskSuggestionResponse response = this.taskSuggestionService.suggestTask(request);
+
+		assertThat(response).isEqualTo(correctedSuggestion);
+		verify(this.tokenCounter).countTaskSuggestionInputTokens(prompt(request, null));
+		verify(this.tokenCounter).countTaskSuggestionInputTokens(prompt(request, failure));
+	}
+
+	@Test
+	void suggestTaskRetriesOnceWhenBeforeWeekdayResolvesToNamedDay() {
+		String request = "submit the quarterly report before Friday";
+		String failure = "dueDate resolved to 2026-05-29 for before FRIDAY; "
+				+ "use minus_days(next_or_same(FRIDAY),1) so it resolves to 2026-05-28";
+		TaskSuggestionResponse namedDaySuggestion = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 29));
+		TaskSuggestionResponse correctedSuggestion = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 28));
+		when(this.taskAiClient.suggestTask(prompt(request, null))).thenReturn(namedDaySuggestion);
+		when(this.taskAiClient.suggestTask(prompt(request, failure))).thenReturn(correctedSuggestion);
+
+		TaskSuggestionResponse response = this.taskSuggestionService.suggestTask(request);
+
+		assertThat(response).isEqualTo(correctedSuggestion);
+		verify(this.tokenCounter).countTaskSuggestionInputTokens(prompt(request, null));
+		verify(this.tokenCounter).countTaskSuggestionInputTokens(prompt(request, failure));
+	}
+
+	@Test
+	void suggestTaskAllowsThisCurrentWeekdayToResolveToToday() {
+		String request = "follow up with finance this Monday";
+		TaskSuggestionResponse suggestion = suggestion("Follow up with finance", CURRENT_DATE);
+		when(this.taskAiClient.suggestTask(prompt(request, null))).thenReturn(suggestion);
+
+		TaskSuggestionResponse response = this.taskSuggestionService.suggestTask(request);
+
+		assertThat(response).isEqualTo(suggestion);
+		verify(this.taskAiClient).suggestTask(prompt(request, null));
+		verifyNoMoreInteractions(this.taskAiClient);
 	}
 
 	@Test
@@ -121,9 +202,23 @@ class TaskSuggestionServiceTest {
 	}
 
 	@Test
+	void suggestTaskFailsWhenRetryStillHasInvalidDueDateRule() {
+		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday", null)))
+			.thenThrow(new AiTaskInvalidOutputException(
+					"AI response dueDateRule was not a supported date-rule expression"));
+		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday",
+				"AI response dueDateRule was not a supported date-rule expression")))
+			.thenThrow(new AiTaskInvalidOutputException("AI response dueDateRule weekday was invalid"));
+
+		assertThatThrownBy(() -> this.taskSuggestionService.suggestTask("submit the quarterly report before Friday"))
+			.isInstanceOf(AiTaskInvalidOutputException.class)
+			.hasMessage("AI response dueDateRule weekday was invalid");
+	}
+
+	@Test
 	void suggestTaskRetriesOnceWhenTitleIsTooLong() {
-		TaskSuggestionResponse overlong = suggestion("a".repeat(256), LocalDate.of(2026, 5, 29));
-		TaskSuggestionResponse complete = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 29));
+		TaskSuggestionResponse overlong = suggestion("a".repeat(256), LocalDate.of(2026, 5, 28));
+		TaskSuggestionResponse complete = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 28));
 		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday", null)))
 			.thenReturn(overlong);
 		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday",
@@ -139,8 +234,8 @@ class TaskSuggestionServiceTest {
 	@Test
 	void suggestTaskRetriesOnceWhenDescriptionIsTooLong() {
 		TaskSuggestionResponse overlong = new TaskSuggestionResponse("Submit quarterly report", "a".repeat(8001),
-				LocalDate.of(2026, 5, 29), TaskPriority.MEDIUM, TaskStatus.TODO);
-		TaskSuggestionResponse complete = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 29));
+				LocalDate.of(2026, 5, 28), TaskPriority.MEDIUM, TaskStatus.TODO);
+		TaskSuggestionResponse complete = suggestion("Submit quarterly report", LocalDate.of(2026, 5, 28));
 		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday", null)))
 			.thenReturn(overlong);
 		when(this.taskAiClient.suggestTask(prompt("submit the quarterly report before Friday",

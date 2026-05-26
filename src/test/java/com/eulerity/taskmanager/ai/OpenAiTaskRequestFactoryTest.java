@@ -12,6 +12,8 @@ import com.openai.models.responses.inputtokens.InputTokenCountParams;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.eulerity.taskmanager.ai.dates.AiDueDateRuleParser;
+import com.eulerity.taskmanager.ai.dates.AiDueDateRuleResolver;
 import com.eulerity.taskmanager.config.OpenAiProperties;
 import com.eulerity.taskmanager.model.TaskFieldLimits;
 import com.eulerity.taskmanager.model.TaskPriority;
@@ -36,13 +38,56 @@ class OpenAiTaskRequestFactoryTest {
 
 		assertThat(instructions).contains("title must be no longer than 255 characters");
 		assertThat(instructions).contains("description must be no longer than 8000 characters");
-		assertThat(instructions).contains("Set dueDate only when the user states or strongly implies a due date.");
-		assertThat(instructions).contains("When set, dueDate must be an ISO-8601 date string in yyyy-MM-dd format.");
-		assertThat(instructions).contains("leave dueDate empty instead of inventing one");
+		assertThat(instructions).contains("Return one structured task suggestion with title, description, dueDateRule, priority, and status.");
+		assertThat(instructions).contains("dueDateRule must be exactly one supported date-rule expression with no spaces");
+		assertThat(instructions).contains("none()");
+		assertThat(instructions).contains("date(YYYY-MM-DD)");
+		assertThat(instructions).contains("month_day(MM-DD)");
+		assertThat(instructions).contains("plus_days(N)");
+		assertThat(instructions).contains("plus_days(EXPR,N)");
+		assertThat(instructions).contains("plus_weeks(N)");
+		assertThat(instructions).contains("plus_weeks(EXPR,N)");
+		assertThat(instructions).contains("minus_days(EXPR,N)");
+		assertThat(instructions).contains("minus_weeks(EXPR,N)");
+		assertThat(instructions).contains("next_or_same(WEEKDAY)");
+		assertThat(instructions).contains("next(WEEKDAY)");
+		assertThat(instructions).contains("nth_next(WEEKDAY,N)");
+		assertThat(instructions).contains("end_of_week()");
+		assertThat(instructions).contains("start_of_next_week()");
+		assertThat(instructions).contains("end_of_month()");
+		assertThat(instructions).contains("start_of_next_month()");
+		assertThat(instructions).contains("end_of_next_month()");
 		assertThat(instructions).contains("Use today's date as context for relative dates: 2026-05-25.");
+		assertThat(instructions).contains("Use none() when no due date is stated or strongly implied.");
+		assertThat(instructions).contains("Use none() when the due-date phrase is unsupported, ambiguous, business-day-specific, holiday-specific, recurrence-based, or cannot be represented by exactly one supported expression.");
+		assertThat(instructions).contains("For \"today\", use date(2026-05-25). Do not return plus_days(0) or today().");
+		assertThat(instructions).contains("Use month_day(MM-DD) when the user gives a month/day without a year; the backend chooses the next upcoming matching date.");
+		assertThat(instructions).contains("Use plus_days(EXPR,N), plus_weeks(EXPR,N), minus_days(EXPR,N), or minus_weeks(EXPR,N) for simple composition. Max nesting depth is 3.");
+		assertThat(instructions).contains("Use next_or_same(WEEKDAY) for bare WEEKDAY, this WEEKDAY, on WEEKDAY, or by WEEKDAY.");
+		assertThat(instructions).contains("Use minus_days(next_or_same(WEEKDAY),1) for before WEEKDAY or before this WEEKDAY. Before excludes the named day.");
+		assertThat(instructions).contains("Use next(WEEKDAY) only when the user explicitly says next WEEKDAY. In this app, next WEEKDAY means that weekday in the next Monday-Sunday calendar week.");
+		assertThat(instructions).contains("Do not use next_or_same(WEEKDAY) for explicit next WEEKDAY phrases.");
+		assertThat(instructions).contains("Use minus_days(next(WEEKDAY),1) for before next WEEKDAY.");
+		assertThat(instructions).contains("Because today is Monday 2026-05-25, \"next Monday\" must use next(MONDAY), resolving to 2026-06-01; \"this Monday\", \"on Monday\", and \"by Monday\" use next_or_same(MONDAY).");
+		assertThat(instructions).contains("For example, with today's date, \"next Friday\" must use next(FRIDAY), resolving to 2026-06-05; \"before Friday\" must use minus_days(next_or_same(FRIDAY),1), resolving to 2026-05-28; \"before next Friday\" must use minus_days(next(FRIDAY),1), resolving to 2026-06-04.");
+		assertThat(instructions).contains("Use nth_next(WEEKDAY,2) for the WEEKDAY after next or two WEEKDAYs from now.");
+		assertThat(instructions).contains("Use next(WEEKDAY) for not this WEEKDAY but the one after.");
+		assertThat(instructions).contains("Use minus_days(nth_next(WEEKDAY,2),1) for before the WEEKDAY after next.");
+		assertThat(instructions).contains("Use end_of_week() for end of week or EOW. End of week means Sunday.");
+		assertThat(instructions).contains("Use minus_days(end_of_month(),N) for N days before the end of the month.");
+		assertThat(instructions).contains("before Friday -> minus_days(next_or_same(FRIDAY),1)");
+		assertThat(instructions).contains("next Friday -> next(FRIDAY)");
+		assertThat(instructions).contains("before next Friday -> minus_days(next(FRIDAY),1)");
+		assertThat(instructions).contains("not this Friday but the one after -> next(FRIDAY)");
+		assertThat(instructions).contains("before the Friday after next -> minus_days(nth_next(FRIDAY,2),1)");
+		assertThat(instructions).contains("For task due dates, \"by Friday\" means Friday; \"before Friday\" means the day before Friday.");
+		assertThat(instructions).contains("Do not return natural-language date text in dueDateRule.");
+		assertThat(instructions).contains("Do not invent a due date when none is stated or strongly implied.");
 		assertThat(instructions).contains("Previous output was invalid: title exceeded 255 characters.");
 		assertThat(instructions).contains("return one valid structured suggestion only");
 		assertThat(instructions).doesNotContain("Return complete valid data for title, description, dueDate");
+		assertThat(instructions).doesNotContain("Return one structured task suggestion with title, description, dueDate, priority");
+		assertThat(instructions).doesNotContain("Set dueDate only");
 	}
 
 	@Test
@@ -53,9 +98,25 @@ class OpenAiTaskRequestFactoryTest {
 		JsonPropertyDescription descriptionDescription =
 				OpenAiTaskClient.TaskSuggestionPayload.class.getField("description")
 					.getAnnotation(JsonPropertyDescription.class);
+		JsonPropertyDescription dueDateRuleDescription =
+				OpenAiTaskClient.TaskSuggestionPayload.class.getField("dueDateRule")
+					.getAnnotation(JsonPropertyDescription.class);
 
 		assertThat(titleDescription.value()).contains(String.valueOf(TaskFieldLimits.TITLE_MAX_LENGTH));
 		assertThat(descriptionDescription.value()).contains(String.valueOf(TaskFieldLimits.DESCRIPTION_MAX_LENGTH));
+		assertThat(dueDateRuleDescription.value()).contains("none()")
+			.contains("date(YYYY-MM-DD)")
+			.contains("month_day(MM-DD)")
+			.contains("plus_days(N)")
+			.contains("plus_days(EXPR,N)")
+			.contains("minus_days(EXPR,N)")
+			.contains("next_or_same(WEEKDAY)")
+			.contains("nth_next(WEEKDAY,N)")
+			.contains("next(WEEKDAY) means that weekday in the next Monday-Sunday calendar week")
+			.contains("Use minus_days(...,1) when before excludes the named date")
+			.contains("start_of_next_month()")
+			.contains("Do not return natural language")
+			.contains("Return none() when no supported due date can be represented");
 	}
 
 	@Test
@@ -105,29 +166,58 @@ class OpenAiTaskRequestFactoryTest {
 	}
 
 	@Test
-	void suggestionPayloadRejectsMalformedDueDate() {
+	void suggestionPayloadResolvesValidDueDateRule() {
 		OpenAiTaskClient.TaskSuggestionPayload payload = new OpenAiTaskClient.TaskSuggestionPayload();
 		payload.title = "Submit quarterly report";
 		payload.description = "Submit the report";
-		payload.dueDate = "next Friday";
+		payload.dueDateRule = "next(FRIDAY)";
 		payload.priority = TaskPriority.MEDIUM;
 		payload.status = TaskStatus.TODO;
 
-		assertThatThrownBy(payload::toTaskSuggestionResponse)
-			.isInstanceOf(AiTaskInvalidOutputException.class)
-			.hasMessage("AI response dueDate was not a valid ISO-8601 date");
+		assertThat(payload.toTaskSuggestionResponse(new AiDueDateRuleParser(), new AiDueDateRuleResolver(),
+				LocalDate.of(2026, 5, 25)).dueDate())
+			.isEqualTo(LocalDate.of(2026, 6, 5));
 	}
 
 	@Test
-	void suggestionPayloadAllowsMissingDueDate() {
+	void suggestionPayloadAllowsNoDateRule() {
 		OpenAiTaskClient.TaskSuggestionPayload payload = new OpenAiTaskClient.TaskSuggestionPayload();
 		payload.title = "Review launch notes";
 		payload.description = "Review and extract follow-up items.";
-		payload.dueDate = null;
+		payload.dueDateRule = "none()";
 		payload.priority = TaskPriority.MEDIUM;
 		payload.status = TaskStatus.TODO;
 
-		assertThat(payload.toTaskSuggestionResponse().dueDate()).isNull();
+		assertThat(payload.toTaskSuggestionResponse(new AiDueDateRuleParser(), new AiDueDateRuleResolver(),
+				LocalDate.of(2026, 5, 25)).dueDate())
+			.isNull();
+	}
+
+	@Test
+	void suggestionPayloadRejectsMissingOrInvalidDueDateRule() {
+		OpenAiTaskClient.TaskSuggestionPayload missing = new OpenAiTaskClient.TaskSuggestionPayload();
+		missing.title = "Submit quarterly report";
+		missing.description = "Submit the report";
+		missing.dueDateRule = null;
+		missing.priority = TaskPriority.MEDIUM;
+		missing.status = TaskStatus.TODO;
+
+		assertThatThrownBy(() -> missing.toTaskSuggestionResponse(new AiDueDateRuleParser(),
+				new AiDueDateRuleResolver(), LocalDate.of(2026, 5, 25)))
+			.isInstanceOf(AiTaskInvalidOutputException.class)
+			.hasMessage("AI response dueDateRule was missing");
+
+		OpenAiTaskClient.TaskSuggestionPayload invalid = new OpenAiTaskClient.TaskSuggestionPayload();
+		invalid.title = "Submit quarterly report";
+		invalid.description = "Submit the report";
+		invalid.dueDateRule = "next Friday";
+		invalid.priority = TaskPriority.MEDIUM;
+		invalid.status = TaskStatus.TODO;
+
+		assertThatThrownBy(() -> invalid.toTaskSuggestionResponse(new AiDueDateRuleParser(),
+				new AiDueDateRuleResolver(), LocalDate.of(2026, 5, 25)))
+			.isInstanceOf(AiTaskInvalidOutputException.class)
+			.hasMessage("AI response dueDateRule was not a supported date-rule expression");
 	}
 
 	@Test

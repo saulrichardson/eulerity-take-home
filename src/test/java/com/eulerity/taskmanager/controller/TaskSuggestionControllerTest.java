@@ -50,7 +50,7 @@ class TaskSuggestionControllerTest {
 	void suggestTaskReturnsMockedAiSuggestion() throws Exception {
 		when(this.taskAiClient.suggestTask(any(AiTaskSuggestionPrompt.class)))
 			.thenReturn(new TaskSuggestionResponse("Submit quarterly report", "Submit the quarterly report",
-					LocalDate.of(2026, 5, 29), TaskPriority.MEDIUM, TaskStatus.TODO));
+					LocalDate.of(2026, 5, 28), TaskPriority.MEDIUM, TaskStatus.TODO));
 
 		this.mockMvc.perform(post("/tasks/suggest")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -62,7 +62,7 @@ class TaskSuggestionControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.title").value("Submit quarterly report"))
 			.andExpect(jsonPath("$.description").value("Submit the quarterly report"))
-			.andExpect(jsonPath("$.dueDate").value("2026-05-29"))
+			.andExpect(jsonPath("$.dueDate").value("2026-05-28"))
 			.andExpect(jsonPath("$.priority").value("MEDIUM"))
 			.andExpect(jsonPath("$.status").value("TODO"));
 	}
@@ -140,7 +140,8 @@ class TaskSuggestionControllerTest {
 	@Test
 	void suggestTaskReturnsStructuredInvalidOutputErrorForMalformedModelOutput() throws Exception {
 		when(this.taskAiClient.suggestTask(any(AiTaskSuggestionPrompt.class)))
-			.thenThrow(new AiTaskInvalidOutputException("AI response dueDate was not a valid ISO-8601 date"));
+			.thenThrow(new AiTaskInvalidOutputException(
+					"AI response dueDateRule was not a supported date-rule expression"));
 
 		this.mockMvc.perform(post("/tasks/suggest")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -152,6 +153,7 @@ class TaskSuggestionControllerTest {
 			.andExpect(status().isBadGateway())
 			.andExpect(jsonPath("$.status").value(502))
 			.andExpect(jsonPath("$.error").value("AI_TASK_OUTPUT_INVALID"))
-			.andExpect(jsonPath("$.message").value("AI response dueDate was not a valid ISO-8601 date"));
+			.andExpect(jsonPath("$.message")
+				.value("AI response dueDateRule was not a supported date-rule expression"));
 	}
 }

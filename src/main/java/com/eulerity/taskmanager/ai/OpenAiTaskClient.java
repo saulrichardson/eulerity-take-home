@@ -1,7 +1,5 @@
 package com.eulerity.taskmanager.ai;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
@@ -10,6 +8,9 @@ import com.openai.models.responses.StructuredResponse;
 import com.openai.models.responses.StructuredResponseCreateParams;
 import org.springframework.stereotype.Component;
 
+import com.eulerity.taskmanager.ai.dates.AiDueDateRule;
+import com.eulerity.taskmanager.ai.dates.AiDueDateRuleParser;
+import com.eulerity.taskmanager.ai.dates.AiDueDateRuleResolver;
 import com.eulerity.taskmanager.config.AiSummaryProperties;
 import com.eulerity.taskmanager.dto.TaskSummaryResponse;
 import com.eulerity.taskmanager.dto.TaskSuggestionResponse;
@@ -25,11 +26,18 @@ public class OpenAiTaskClient implements TaskAiClient {
 
 	private final AiSummaryProperties summaryProperties;
 
+	private final AiDueDateRuleParser dueDateRuleParser;
+
+	private final AiDueDateRuleResolver dueDateRuleResolver;
+
 	public OpenAiTaskClient(OpenAiClientProvider clientProvider, OpenAiTaskRequestFactory requestFactory,
-			AiSummaryProperties summaryProperties) {
+			AiSummaryProperties summaryProperties, AiDueDateRuleParser dueDateRuleParser,
+			AiDueDateRuleResolver dueDateRuleResolver) {
 		this.clientProvider = clientProvider;
 		this.requestFactory = requestFactory;
 		this.summaryProperties = summaryProperties;
+		this.dueDateRuleParser = dueDateRuleParser;
+		this.dueDateRuleResolver = dueDateRuleResolver;
 	}
 
 	@Override
@@ -47,7 +55,8 @@ public class OpenAiTaskClient implements TaskAiClient {
 				.flatMap(content -> content.outputText().stream())
 				.findFirst()
 				.orElseThrow(() -> new AiTaskInvalidOutputException("AI response did not include structured task data"));
-			return payload.toTaskSuggestionResponse();
+			return payload.toTaskSuggestionResponse(this.dueDateRuleParser, this.dueDateRuleResolver,
+					prompt.currentDate());
 		}
 		catch (AiTaskInvalidOutputException ex) {
 			throw ex;
@@ -102,8 +111,20 @@ public class OpenAiTaskClient implements TaskAiClient {
 		@JsonPropertyDescription("Optional distilled task detail, no longer than 8000 characters.")
 		public String description;
 
-		@JsonPropertyDescription("Due date in yyyy-MM-dd format. Empty when no due date is stated or strongly implied.")
-		public String dueDate;
+		@JsonPropertyDescription("""
+				A due-date rule expression. Use exactly one supported expression:
+				none(), date(YYYY-MM-DD), month_day(MM-DD), plus_days(N),
+				plus_days(EXPR,N), plus_weeks(N), plus_weeks(EXPR,N),
+				minus_days(EXPR,N), minus_weeks(EXPR,N), next_or_same(WEEKDAY),
+				next(WEEKDAY), nth_next(WEEKDAY,N), end_of_week(),
+				start_of_next_week(), end_of_month(), start_of_next_month(),
+				or end_of_next_month().
+				Allowed weekdays are MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, and SUNDAY.
+				next(WEEKDAY) means that weekday in the next Monday-Sunday calendar week.
+				Use minus_days(...,1) when before excludes the named date.
+				Do not return natural language. Return none() when no supported due date can be represented.
+				""")
+		public String dueDateRule;
 
 		@JsonPropertyDescription("Task priority. Must be LOW, MEDIUM, or HIGH.")
 		public TaskPriority priority;
@@ -111,17 +132,12 @@ public class OpenAiTaskClient implements TaskAiClient {
 		@JsonPropertyDescription("Task status. Must be TODO, IN_PROGRESS, or DONE.")
 		public TaskStatus status;
 
-		TaskSuggestionResponse toTaskSuggestionResponse() {
-			LocalDate parsedDueDate = null;
-			if (this.dueDate != null && !this.dueDate.isBlank()) {
-				try {
-					parsedDueDate = LocalDate.parse(this.dueDate);
-				}
-				catch (DateTimeParseException ex) {
-					throw new AiTaskInvalidOutputException("AI response dueDate was not a valid ISO-8601 date", ex);
-				}
-			}
-			return new TaskSuggestionResponse(this.title, this.description, parsedDueDate, this.priority, this.status);
+		TaskSuggestionResponse toTaskSuggestionResponse(AiDueDateRuleParser parser, AiDueDateRuleResolver resolver,
+				java.time.LocalDate currentDate) {
+			AiDueDateRule parsedRule = parser.parse(this.dueDateRule);
+			java.time.LocalDate resolvedDueDate = resolver.resolve(parsedRule, currentDate);
+			return new TaskSuggestionResponse(this.title, this.description, resolvedDueDate, this.priority,
+					this.status);
 		}
 	}
 

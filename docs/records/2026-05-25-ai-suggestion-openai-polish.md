@@ -11,6 +11,10 @@ hardening limits.
 
 ## Record
 
+This record describes the polish pass before the internal AI due-date rule DSL.
+Current suggestion date behavior is documented in
+`2026-05-25-ai-due-date-rule-dsl.md`.
+
 AI suggestions are drafts. Persisted tasks remain records. Draft suggestions may
 return `dueDate: null` or an empty due date when the user did not state or
 strongly imply a due date. Creating or fully updating a persisted task still

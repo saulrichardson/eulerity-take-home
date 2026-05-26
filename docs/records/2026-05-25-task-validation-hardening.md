@@ -14,6 +14,10 @@ This record describes the initial validation hardening pass. The current limits
 were later raised; see `2026-05-25-ai-context-budgeting.md` for current task
 text limits.
 
+Historical caveat: the values below reflect the implementation at the time of
+this record. Current task and AI text limits are documented in `README.md` and
+`docs/approach.md`.
+
 Task request DTOs now enforce:
 
 - `title`: at most 200 characters

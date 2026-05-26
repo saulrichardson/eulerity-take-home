@@ -15,6 +15,10 @@ request limit and task field limits were later raised; see
 `2026-05-25-ai-context-budgeting.md` and
 `2026-05-25-ai-token-preflight.md` for current limits and budgeting behavior.
 
+Historical caveat: the values below reflect the implementation at the time of
+this record. Current task, AI suggestion, and token-budget limits are documented
+in `README.md` and `docs/approach.md`.
+
 AI suggestion request text is capped at 2000 characters. This is enough for
 plain-language task intent while bounding request size, latency, and model cost.
 

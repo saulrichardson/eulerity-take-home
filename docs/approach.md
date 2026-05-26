@@ -61,6 +61,13 @@ Describe the current system shape at the level future agents need to act.
 - AI suggestion behavior: suggestions are drafts and may omit `dueDate` when
   the source text does not state or strongly imply a date; persisted tasks still
   require `dueDate`
+- AI suggestion due-date handling: the OpenAI structured payload uses an
+  internal whitelisted `dueDateRule` expression DSL, such as
+  `next_or_same(FRIDAY)`, `month_day(06-05)`,
+  `minus_days(end_of_month(),2)`, `next(FRIDAY)`,
+  `minus_days(next(FRIDAY),1)`, or `none()`, and backend code parses and
+  resolves that expression to the public `dueDate` response using the captured
+  server-local date
 - summary behavior: `POST /tasks/summary` loads stored tasks, returns a
   natural-language summary and short plan, and never persists the AI output
 - summary task selection: `ai.summary.candidate-task-cap` defaults to 30 tasks;
@@ -82,7 +89,13 @@ Describe the current system shape at the level future agents need to act.
 - date-sensitive suggestion behavior: OpenAI suggestion instructions also use
   injected `Clock` for relative-date context; `TaskSuggestionService` captures
   the current date once per suggestion workflow and passes it through
-  `AiTaskSuggestionPrompt` so token preflight and model calls use the same date
+  `AiTaskSuggestionPrompt` so token preflight, model calls, and internal
+  due-date rule resolution use the same date
+- suggestion due-date semantic guard: for a narrow set of explicit weekday
+  phrases such as `before Friday`, `next Friday`, `before next Friday`,
+  `not this Friday but the one after`, and `the Friday after next`, the service
+  rejects syntactically valid but semantically wrong model dates and retries
+  once with a specific correction reason
 - where integrations and side effects live: the OpenAI client implementation
   under an AI boundary; API-key checks and configured client creation live in
   `OpenAiClientProvider`
@@ -120,7 +133,29 @@ Document the facts that shape future work.
   characters because it may contain raw pasted context; returned suggestions
   must still satisfy task title and description limits
 - due-date rule split: task records require `dueDate`; AI suggestion drafts may
-  return `dueDate: null` or empty when no due date is stated or strongly implied
+  return public `dueDate: null` when no due date is stated or strongly implied
+- AI suggestion date math is app-owned: the model returns only one supported
+  `dueDateRule` expression internally. Supported forms include `none()`,
+  `date(YYYY-MM-DD)`, `month_day(MM-DD)`, simple day/week offsets,
+  composition such as `minus_days(next(FRIDAY),1)`, weekday rules such as
+  `next(WEEKDAY)` and `nth_next(WEEKDAY,N)`, and month/week boundary rules; the
+  app does not evaluate model-generated code or expose the DSL in the public API
+- AI suggestion weekday convention: `by Friday`, `on Friday`, bare `Friday`,
+  and `this Friday` use the upcoming-or-same weekday; `before Friday` means the
+  day before that weekday; `next Friday` means Friday in the next Monday-Sunday
+  calendar week; `before next Friday` means the day before that next-week
+  Friday; `the Friday after next` means the second upcoming Friday
+- AI suggestion date-expression limits: expressions have no spaces, use only
+  whitelisted functions, cap nesting at 3 levels, cap numeric offsets, define
+  end of week as Sunday, and deliberately exclude business days, holidays,
+  recurrences, external calendars, and timezone-personalized scheduling
+- AI suggestion explicit dates: `date(YYYY-MM-DD)` may resolve to a past date
+  when the user explicitly provides one; the app treats that as an overdue
+  draft rather than rejecting it
+- AI suggestion semantic validation stays narrow: backend validation may reject
+  a syntactically valid model date when it clearly contradicts one of the
+  documented explicit weekday phrases, but it should not grow into broad
+  natural-language date parsing
 - OpenAI model context window defaults to 400000 tokens for `gpt-5.4-nano`;
   `openai.context-usage-ratio` defaults to 0.90 and is validation-capped at
   0.90, producing a 360000-token hard ceiling before output and request overhead
@@ -192,3 +227,4 @@ should remember.
 - `records/2026-05-25-ai-context-budgeting.md`
 - `records/2026-05-25-ai-token-preflight.md`
 - `records/2026-05-25-ai-suggestion-openai-polish.md`
+- `records/2026-05-25-ai-due-date-rule-dsl.md`

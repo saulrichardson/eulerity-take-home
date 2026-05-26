@@ -34,7 +34,8 @@ and task summaries are configured safely.
   turning tasks into unlimited documents.
 - Users can review an AI suggestion and explicitly create a real task from it;
   suggestions are drafts and may omit due dates, while persisted tasks require
-  due dates.
+  due dates. Relative due-date math for AI suggestions belongs to backend code,
+  not to model-generated concrete dates.
 - Users can summarize the stored task list into a short workload summary and
   practical focus plan without persisting the AI output.
 - The app remains usable without OpenAI credentials; model-backed AI features
@@ -61,6 +62,12 @@ and task summaries are configured safely.
 - Small scope: task CRUD, AI suggestion, AI task summary, and minimal UI only.
 - AI output should help with task creation and prioritization, but should not
   persist automatically or invent unsupported task context.
+- AI task suggestions should keep the public API simple: the model classifies
+  due-date intent into a bounded internal date expression, and the backend
+  resolves that expression to `dueDate` as `yyyy-MM-dd` or `null`.
+- AI date handling should cover common and moderately complex single due-date
+  phrases, but should not become a business-calendar, holiday, recurrence, or
+  reminder engine.
 - AI prompts should stay bounded and coherent: preserve task identity and core
   metadata first, reduce description detail at natural boundaries, and omit less
   relevant task records as whole records when needed.
@@ -75,7 +82,11 @@ Representative examples, scenarios, sample inputs, sample outputs, or sketches:
 - Plain-language AI input:
   `"remind me to submit the quarterly report before Friday"`
 - Structured task suggestion:
-  `{ "title": "Submit quarterly report", "dueDate": "2026-05-29", "priority": "MEDIUM", "status": "TODO" }`
+  `{ "title": "Submit quarterly report", "dueDate": "2026-05-28", "priority": "MEDIUM", "status": "TODO" }`
+
+The example assumes the server-local date is Monday, 2026-05-25. In AI
+suggestions, `before Friday` means the day before Friday, while `next Friday`
+means Friday in the next Monday-Sunday calendar week.
 
 ## Open Questions
 

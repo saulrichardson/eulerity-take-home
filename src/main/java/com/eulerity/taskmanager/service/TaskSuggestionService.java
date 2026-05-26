@@ -12,6 +12,7 @@ import com.eulerity.taskmanager.ai.AiTaskInvalidOutputException;
 import com.eulerity.taskmanager.ai.AiTaskSuggestionPrompt;
 import com.eulerity.taskmanager.ai.TaskAiClient;
 import com.eulerity.taskmanager.ai.TaskAiTokenCounter;
+import com.eulerity.taskmanager.ai.dates.AiDueDateSemanticValidator;
 import com.eulerity.taskmanager.config.OpenAiProperties;
 import com.eulerity.taskmanager.dto.TaskSuggestionResponse;
 import com.eulerity.taskmanager.model.TaskFieldLimits;
@@ -27,12 +28,15 @@ public class TaskSuggestionService {
 
 	private final Clock clock;
 
+	private final AiDueDateSemanticValidator dueDateSemanticValidator;
+
 	public TaskSuggestionService(TaskAiClient taskAiClient, TaskAiTokenCounter tokenCounter,
-			OpenAiProperties openAiProperties, Clock clock) {
+			OpenAiProperties openAiProperties, Clock clock, AiDueDateSemanticValidator dueDateSemanticValidator) {
 		this.taskAiClient = taskAiClient;
 		this.tokenCounter = tokenCounter;
 		this.openAiProperties = openAiProperties;
 		this.clock = clock;
+		this.dueDateSemanticValidator = dueDateSemanticValidator;
 	}
 
 	public TaskSuggestionResponse suggestTask(String plainLanguageDescription) {
@@ -41,7 +45,8 @@ public class TaskSuggestionService {
 		try {
 			TaskSuggestionResponse firstAttempt = callClient(
 					new AiTaskSuggestionPrompt(plainLanguageDescription, null, currentDate));
-			List<String> firstAttemptFailures = validationFailures(firstAttempt);
+			List<String> firstAttemptFailures = validationFailures(plainLanguageDescription, firstAttempt,
+					currentDate);
 			if (firstAttemptFailures.isEmpty()) {
 				return firstAttempt;
 			}
@@ -53,7 +58,8 @@ public class TaskSuggestionService {
 
 		TaskSuggestionResponse secondAttempt = callClient(
 				new AiTaskSuggestionPrompt(plainLanguageDescription, failureReason, currentDate));
-		List<String> secondAttemptFailures = validationFailures(secondAttempt);
+		List<String> secondAttemptFailures = validationFailures(plainLanguageDescription, secondAttempt,
+				currentDate);
 		if (secondAttemptFailures.isEmpty()) {
 			return secondAttempt;
 		}
@@ -62,7 +68,8 @@ public class TaskSuggestionService {
 				"AI response did not include valid task data after retry: " + String.join("; ", secondAttemptFailures));
 	}
 
-	private List<String> validationFailures(TaskSuggestionResponse suggestion) {
+	private List<String> validationFailures(String plainLanguageDescription, TaskSuggestionResponse suggestion,
+			LocalDate currentDate) {
 		List<String> failures = new ArrayList<>();
 		if (suggestion == null) {
 			failures.add("response was missing");
@@ -84,6 +91,8 @@ public class TaskSuggestionService {
 		if (suggestion.status() == null) {
 			failures.add("status was missing");
 		}
+		failures.addAll(this.dueDateSemanticValidator.validationFailures(plainLanguageDescription,
+				suggestion.dueDate(), currentDate));
 		return failures;
 	}
 

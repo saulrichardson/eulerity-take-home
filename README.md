@@ -191,6 +191,28 @@ characters. AI suggestions are drafts, so `dueDate` may be `null` when the
 input does not state or strongly imply a due date. Persisted task records still
 require `dueDate`.
 
+AI suggestions use an internal date-expression resolution step. The model
+identifies one whitelisted due-date expression such as `next_or_same(FRIDAY)`,
+`month_day(06-05)`, `minus_days(end_of_month(),2)`,
+`next(FRIDAY)`, `minus_days(next(FRIDAY),1)`, or `none()`, and the backend
+resolves that expression against the server-local date captured for the
+suggestion request. The public API still returns only `dueDate` as `yyyy-MM-dd`
+or `null`; it does not expose the internal expression. If the model cannot
+represent a date phrase with the supported expression language, it should
+return `none()` so the user can add the date manually. Explicit past dates are
+allowed and become overdue task drafts rather than validation failures.
+
+Weekday language follows a small app-owned convention:
+
+- `by Friday`, `on Friday`, `Friday`, and `this Friday` resolve to the named
+  upcoming-or-same weekday.
+- `before Friday` and `before this Friday` resolve to the day before that
+  upcoming-or-same weekday.
+- `next Friday` means Friday in the next Monday-Sunday calendar week.
+- `before next Friday` resolves to the day before that next-week Friday.
+- `not this Friday but the one after` resolves to the next-week Friday.
+- `the Friday after next` resolves to the second upcoming Friday.
+
 Request:
 
 ```json
@@ -205,11 +227,13 @@ Success response:
 {
   "title": "Submit quarterly report",
   "description": "Submit the quarterly report before Friday.",
-  "dueDate": "2026-05-29",
+  "dueDate": "2026-05-28",
   "priority": "MEDIUM",
   "status": "TODO"
 }
 ```
+
+The example above assumes the server-local date is Monday, 2026-05-25.
 
 If no due date is stated or strongly implied, the endpoint may return:
 
@@ -252,8 +276,9 @@ output cap and request overhead reserve exceed the configured model hard context
 ceiling, the endpoint returns a structured `AI_TASK_FAILED` error instead of
 calling the model. The server-local date used for relative due-date
 interpretation is captured once per suggestion workflow and reused for both
-token preflight and the model request. Invalid or incomplete model output is
-retried once with a specific validation failure reason, then returned as
+token preflight, the model request, and internal date-rule resolution. Invalid
+or incomplete model output, including unsupported due-date rules, is retried
+once with a specific validation failure reason, then returned as
 `AI_TASK_OUTPUT_INVALID` without fallback task defaults.
 
 ## AI Budgeting Policy
@@ -416,7 +441,15 @@ only for local manual verification:
 - Set `OPENAI_API_KEY` locally and confirm `POST /tasks/suggest` returns a
   structured suggestion.
 - With `OPENAI_API_KEY` set, submit suggestion text with no due date and confirm
-  the endpoint can return `dueDate: null` or an empty due date.
+  the endpoint can return `dueDate: null`.
+- With `OPENAI_API_KEY` set, submit `follow up with finance next <today's
+  weekday>` and confirm the returned `dueDate` is that weekday in the next
+  Monday-Sunday calendar week, not today's date.
+- With `OPENAI_API_KEY` set, submit date phrases for `today`, `June 5`,
+  `before Friday`, `next Friday`, `before next Friday`, `end of week`,
+  `not this Friday but the one after`, `the Friday after next`, and `two days
+  before end of month`; confirm results match the documented server-local date
+  semantics and end of week resolves to Sunday.
 - Confirm the UI does not directly create a task from a no-date suggestion.
 - Confirm the UI can copy a no-date suggestion into the form, let the user add a
   due date, and then create the task.
@@ -425,6 +458,15 @@ only for local manual verification:
 
 ## Known Limitations
 
+- H2 persistence is in memory. Task data resets when the application process
+  stops, and this is intentional for the local take-home scope.
+- Live OpenAI suggestions and summaries require local `OPENAI_API_KEY`
+  configuration. The core CRUD app still runs without OpenAI credentials.
+- Automated tests mock OpenAI boundaries and do not call the live provider.
+  Live provider behavior is covered by the manual smoke checklist above when a
+  local API key is available.
+- The UI is intentionally minimal: it supports the required local workflows but
+  is not a production design system or full frontend application.
 - OpenAI transport failures are not retried. Only invalid model output for task
   suggestions is retried once with a specific validation reason.
 - There is no circuit breaker, fallback AI response, or explicit OpenAI timeout
