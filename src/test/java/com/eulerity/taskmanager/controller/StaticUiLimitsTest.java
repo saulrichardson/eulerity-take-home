@@ -25,11 +25,12 @@ class StaticUiLimitsTest {
 
 	@Test
 	void staticUiBlocksDirectCreateFromNoDateSuggestion() throws Exception {
-		String html = Files.readString(Path.of("src/main/resources/static/index.html"));
+		String app = Files.readString(Path.of("src/main/resources/static/app.js"));
+		String ui = Files.readString(Path.of("src/main/resources/static/ui.js"));
 
-		assertThat(html).contains("suggestion.dueDate || \"No due date\"");
-		assertThat(html).contains("createButton.disabled = !hasDueDate");
-		assertThat(html).contains("Add a due date in the task form before creating this task.");
-		assertThat(html).contains("if (!latestSuggestion.dueDate)");
+		assertThat(ui).contains("suggestion.dueDate || \"No due date\"");
+		assertThat(ui).contains("createButton.disabled = !hasDueDate");
+		assertThat(ui).contains("Add a due date in the task form before creating this task.");
+		assertThat(app).contains("if (!state.latestSuggestion || !state.latestSuggestion.dueDate)");
 	}
 }

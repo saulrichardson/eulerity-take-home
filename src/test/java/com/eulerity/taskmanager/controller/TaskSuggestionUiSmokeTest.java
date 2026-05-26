@@ -128,6 +128,56 @@ class TaskSuggestionUiSmokeTest {
 		assertThat(this.taskRepository.count()).isEqualTo(1);
 	}
 
+	@Test
+	void taskRowsCanBeCreatedEditedMarkedDoneAndDeleted() {
+		this.driver.get("http://localhost:" + this.port + "/");
+		waitForTaskCount("0 tasks");
+
+		setValue("title", "E2E Dashboard Task");
+		setValue("description", "Created through the refined dashboard UI.");
+		setValue("dueDate", "2026-06-10");
+		setValue("priority", "HIGH");
+		setValue("status", "TODO");
+		this.driver.findElement(By.id("taskSubmitButton")).click();
+		waitForTaskCount("1 task");
+		this.wait.until(ExpectedConditions.textToBePresentInElementLocated(By.id("taskList"), "E2E Dashboard Task"));
+		assertThat(this.driver.findElement(By.id("taskList")).getText()).contains("E2E Dashboard Task")
+			.contains("Created through the refined dashboard UI.")
+			.contains("Due 2026-06-10")
+			.contains("HIGH")
+			.contains("TODO");
+
+		this.wait.until(ExpectedConditions.elementToBeClickable(
+				By.xpath("//*[@id='taskList']//button[normalize-space()='Edit']")))
+			.click();
+		this.wait.until(ExpectedConditions.textToBePresentInElementLocated(By.id("createTitle"), "EDIT TASK"));
+		assertThat(value("title")).isEqualTo("E2E Dashboard Task");
+		assertThat(value("description")).isEqualTo("Created through the refined dashboard UI.");
+		assertThat(value("dueDate")).isEqualTo("2026-06-10");
+
+		setValue("title", "E2E Dashboard Task Updated");
+		setValue("description", "Updated without leaving the task list.");
+		setValue("dueDate", "2026-06-12");
+		setValue("priority", "MEDIUM");
+		setValue("status", "IN_PROGRESS");
+		this.driver.findElement(By.id("taskSubmitButton")).click();
+		this.wait.until(ExpectedConditions.textToBePresentInElementLocated(By.id("formMessage"), "Task updated."));
+		assertThat(this.driver.findElement(By.id("taskList")).getText()).contains("E2E Dashboard Task Updated")
+			.contains("Updated without leaving the task list.")
+			.contains("Due 2026-06-12")
+			.contains("MEDIUM")
+			.contains("IN_PROGRESS");
+
+		this.driver.findElement(By.xpath("//*[@id='taskList']//button[normalize-space()='Mark Done']")).click();
+		this.wait.until(ExpectedConditions.textToBePresentInElementLocated(By.id("taskList"), "DONE"));
+		assertThat(this.driver.findElement(By.id("taskList")).getText()).doesNotContain("Mark Done");
+
+		this.driver.findElement(By.xpath("//*[@id='taskList']//button[normalize-space()='Delete']")).click();
+		waitForTaskCount("0 tasks");
+		this.wait.until(ExpectedConditions.textToBePresentInElementLocated(By.id("formMessage"), "Task deleted."));
+		assertThat(this.taskRepository.count()).isZero();
+	}
+
 	private WebDriver startChromeOrSkip() {
 		try {
 			ChromeOptions options = new ChromeOptions();
@@ -149,7 +199,20 @@ class TaskSuggestionUiSmokeTest {
 		return this.driver.findElement(By.id(elementId)).getDomProperty("value");
 	}
 
+	private void setValue(String elementId, String value) {
+		js("""
+				const input = document.getElementById(arguments[0]);
+				input.value = arguments[1];
+				input.dispatchEvent(new Event('input', { bubbles: true }));
+				input.dispatchEvent(new Event('change', { bubbles: true }));
+				""", elementId, value);
+	}
+
 	private Object js(String script) {
 		return ((JavascriptExecutor) this.driver).executeScript(script);
+	}
+
+	private Object js(String script, Object... args) {
+		return ((JavascriptExecutor) this.driver).executeScript(script, args);
 	}
 }

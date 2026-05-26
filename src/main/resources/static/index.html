@@ -5,393 +5,65 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Eulerity Task Manager</title>
 	<link rel="icon" href="data:,">
-	<style>
-		:root {
-			--surface: #f7f7f4;
-			--panel: #ffffff;
-			--panel-strong: #f0f2ef;
-			--text: #20231f;
-			--muted: #697066;
-			--border: #d7ddd2;
-			--primary: #245f73;
-			--primary-dark: #174554;
-			--accent: #b85c38;
-			--danger: #9d2d2d;
-			--success: #2e6f47;
-			--warning: #8d651e;
-			--shadow: 0 12px 32px rgb(33 42 31 / 9%);
-			--radius: 8px;
-			--space-1: 0.25rem;
-			--space-2: 0.5rem;
-			--space-3: 0.75rem;
-			--space-4: 1rem;
-			--space-5: 1.5rem;
-			--space-6: 2rem;
-			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-			color: var(--text);
-			background: var(--surface);
-		}
-
-		* {
-			box-sizing: border-box;
-		}
-
-		body {
-			margin: 0;
-			min-height: 100vh;
-			background:
-				linear-gradient(90deg, rgb(32 35 31 / 4%) 1px, transparent 1px),
-				linear-gradient(180deg, rgb(32 35 31 / 4%) 1px, transparent 1px),
-				var(--surface);
-			background-size: 32px 32px;
-		}
-
-		button,
-		input,
-		textarea,
-		select {
-			font: inherit;
-		}
-
-		button {
-			border: 0;
-			border-radius: 6px;
-			background: var(--primary);
-			color: #fff;
-			cursor: pointer;
-			font-weight: 700;
-			min-height: 2.5rem;
-			padding: 0.65rem 0.9rem;
-			transition: background 140ms ease, transform 140ms ease;
-		}
-
-		button:hover {
-			background: var(--primary-dark);
-			transform: translateY(-1px);
-		}
-
-		button.secondary {
-			background: #e7ece8;
-			color: var(--text);
-		}
-
-		button.secondary:hover {
-			background: #dce4dd;
-		}
-
-		button.danger {
-			background: var(--danger);
-		}
-
-		button:disabled {
-			cursor: not-allowed;
-			opacity: 0.6;
-			transform: none;
-		}
-
-		.app-shell {
-			width: min(1180px, calc(100vw - 32px));
-			margin: 0 auto;
-			padding: var(--space-6) 0;
-		}
-
-		header {
-			display: flex;
-			align-items: end;
-			justify-content: space-between;
-			gap: var(--space-4);
-			border-bottom: 2px solid var(--text);
-			padding-bottom: var(--space-4);
-			margin-bottom: var(--space-5);
-		}
-
-		h1,
-		h2,
-		h3,
-		p {
-			margin: 0;
-		}
-
-		h1 {
-			font-size: 2.25rem;
-			line-height: 1.05;
-		}
-
-		h2 {
-			font-size: 1.05rem;
-			text-transform: uppercase;
-			letter-spacing: 0;
-		}
-
-		.status-line {
-			color: var(--muted);
-			font-size: 0.95rem;
-			text-align: right;
-		}
-
-		.layout {
-			display: grid;
-			grid-template-columns: minmax(280px, 390px) minmax(0, 1fr);
-			gap: var(--space-5);
-			align-items: start;
-		}
-
-		.panel {
-			background: var(--panel);
-			border: 1px solid var(--border);
-			border-radius: var(--radius);
-			box-shadow: var(--shadow);
-			padding: var(--space-5);
-		}
-
-		.side-stack {
-			display: grid;
-			gap: var(--space-5);
-		}
-
-		form {
-			display: grid;
-			gap: var(--space-4);
-			margin-top: var(--space-4);
-		}
-
-		label {
-			display: grid;
-			gap: var(--space-2);
-			font-weight: 700;
-			color: #333a31;
-		}
-
-		input,
-		textarea,
-		select {
-			width: 100%;
-			border: 1px solid var(--border);
-			border-radius: 6px;
-			background: #fbfcfa;
-			color: var(--text);
-			min-height: 2.5rem;
-			padding: 0.65rem 0.75rem;
-		}
-
-		textarea {
-			min-height: 5rem;
-			resize: vertical;
-		}
-
-		.field-row {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: var(--space-3);
-		}
-
-		.actions {
-			display: flex;
-			gap: var(--space-3);
-			flex-wrap: wrap;
-		}
-
-		.notice {
-			border-left: 4px solid var(--primary);
-			background: var(--panel-strong);
-			color: var(--text);
-			margin-top: var(--space-4);
-			padding: var(--space-3);
-			white-space: pre-wrap;
-		}
-
-		.notice.error {
-			border-color: var(--danger);
-			color: var(--danger);
-		}
-
-		.suggestion-grid {
-			display: grid;
-			gap: var(--space-2);
-			margin-top: var(--space-4);
-		}
-
-		.suggestion-row {
-			display: grid;
-			grid-template-columns: 7rem 1fr;
-			gap: var(--space-3);
-			border-bottom: 1px solid var(--border);
-			padding: var(--space-2) 0;
-		}
-
-		.suggestion-row span:first-child {
-			color: var(--muted);
-			font-weight: 700;
-		}
-
-		.summary-output {
-			display: grid;
-			gap: var(--space-3);
-			margin-top: var(--space-4);
-		}
-
-		.summary-output ol {
-			margin: 0;
-			padding-left: 1.25rem;
-		}
-
-		.summary-output li + li {
-			margin-top: var(--space-2);
-		}
-
-		.task-toolbar {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: var(--space-3);
-			margin-bottom: var(--space-4);
-		}
-
-		.task-controls {
-			display: grid;
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-			gap: var(--space-3);
-			margin-bottom: var(--space-4);
-		}
-
-		.task-count {
-			color: var(--muted);
-			font-weight: 700;
-		}
-
-		table {
-			width: 100%;
-			border-collapse: collapse;
-			background: var(--panel);
-		}
-
-		th,
-		td {
-			border-bottom: 1px solid var(--border);
-			padding: 0.8rem 0.65rem;
-			text-align: left;
-			vertical-align: top;
-		}
-
-		th {
-			color: var(--muted);
-			font-size: 0.8rem;
-			text-transform: uppercase;
-			letter-spacing: 0;
-		}
-
-		.empty-state {
-			background: var(--panel-strong);
-			border: 1px dashed var(--border);
-			border-radius: var(--radius);
-			color: var(--muted);
-			padding: var(--space-6);
-			text-align: center;
-		}
-
-		.badge {
-			display: inline-flex;
-			align-items: center;
-			border-radius: 999px;
-			font-size: 0.8rem;
-			font-weight: 800;
-			min-height: 1.7rem;
-			padding: 0.2rem 0.55rem;
-			white-space: nowrap;
-		}
-
-		.badge.priority-high {
-			background: #ffe6dc;
-			color: var(--accent);
-		}
-
-		.badge.priority-medium {
-			background: #fff1cc;
-			color: var(--warning);
-		}
-
-		.badge.priority-low {
-			background: #e2f1e6;
-			color: var(--success);
-		}
-
-		.badge.status {
-			background: #e4eef2;
-			color: var(--primary);
-		}
-
-		@media (max-width: 860px) {
-			.app-shell {
-				width: min(100vw - 24px, 720px);
-				padding: var(--space-5) 0;
-			}
-
-			header,
-			.layout,
-			.field-row,
-			.task-controls {
-				grid-template-columns: 1fr;
-			}
-
-			header {
-				display: grid;
-				align-items: start;
-			}
-
-			.status-line {
-				text-align: left;
-			}
-
-			table,
-			thead,
-			tbody,
-			th,
-			td,
-			tr {
-				display: block;
-			}
-
-			thead {
-				display: none;
-			}
-
-			tr {
-				border: 1px solid var(--border);
-				border-radius: var(--radius);
-				margin-bottom: var(--space-3);
-				overflow: hidden;
-				background: var(--panel);
-			}
-
-			td {
-				display: grid;
-				grid-template-columns: 8rem 1fr;
-				gap: var(--space-3);
-			}
-
-			td::before {
-				color: var(--muted);
-				content: attr(data-label);
-				font-weight: 800;
-				text-transform: uppercase;
-			}
-		}
-	</style>
+	<link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 	<div class="app-shell">
-		<header>
+		<header class="app-header">
 			<div>
+				<p class="eyebrow">Eulerity Take-Home</p>
 				<h1>Task Manager</h1>
 			</div>
-			<p class="status-line" id="statusLine">Loading tasks...</p>
+			<div class="header-status">
+				<span class="task-count-pill" id="taskCount">0 tasks</span>
+				<span class="status-line" id="statusLine">Loading tasks...</span>
+			</div>
 		</header>
 
-		<main class="layout">
-			<div class="side-stack">
-				<section class="panel" aria-labelledby="createTitle">
-					<h2 id="createTitle">Create Task</h2>
-					<form id="taskForm">
+		<main class="dashboard">
+			<section class="task-board" aria-labelledby="taskListTitle">
+				<div class="board-header">
+					<div>
+						<h2 id="taskListTitle">Work Queue</h2>
+					</div>
+					<div class="task-controls" aria-label="Task list controls">
+						<label>
+							Status
+							<select id="statusFilter" name="statusFilter">
+								<option value="">All statuses</option>
+								<option value="TODO">TODO</option>
+								<option value="IN_PROGRESS">IN_PROGRESS</option>
+								<option value="DONE">DONE</option>
+							</select>
+						</label>
+						<label>
+							Priority
+							<select id="priorityFilter" name="priorityFilter">
+								<option value="">All priorities</option>
+								<option value="LOW">LOW</option>
+								<option value="MEDIUM">MEDIUM</option>
+								<option value="HIGH">HIGH</option>
+							</select>
+						</label>
+						<label>
+							Sort
+							<select id="taskSort" name="taskSort">
+								<option value="id">Created order</option>
+								<option value="dueDate">Due date</option>
+								<option value="priority">Priority</option>
+							</select>
+						</label>
+					</div>
+				</div>
+				<div id="taskList" class="task-list"></div>
+			</section>
+
+			<aside class="workspace-panel" aria-label="Task tools">
+				<section class="tool-panel" aria-labelledby="createTitle">
+					<div class="panel-heading">
+						<h2 id="createTitle">New Task</h2>
+					</div>
+					<form id="taskForm" class="task-form">
 						<label>
 							Title
 							<input id="title" name="title" required maxlength="255" autocomplete="off">
@@ -400,11 +72,11 @@
 							Description
 							<textarea id="description" name="description" maxlength="8000"></textarea>
 						</label>
-						<label>
-							Due Date
-							<input id="dueDate" name="dueDate" type="date" required>
-						</label>
-						<div class="field-row">
+						<div class="form-grid">
+							<label>
+								Due Date
+								<input id="dueDate" name="dueDate" type="date" required>
+							</label>
 							<label>
 								Priority
 								<select id="priority" name="priority" required>
@@ -413,484 +85,53 @@
 									<option value="HIGH">HIGH</option>
 								</select>
 							</label>
-							<label>
-								Status
-								<select id="status" name="status" required>
-									<option value="TODO" selected>TODO</option>
-									<option value="IN_PROGRESS">IN_PROGRESS</option>
-									<option value="DONE">DONE</option>
-								</select>
-							</label>
 						</div>
+						<label>
+							Status
+							<select id="status" name="status" required>
+								<option value="TODO" selected>TODO</option>
+								<option value="IN_PROGRESS">IN_PROGRESS</option>
+								<option value="DONE">DONE</option>
+							</select>
+						</label>
 						<div class="actions">
-							<button type="submit">Create</button>
+							<button type="submit" id="taskSubmitButton">Create Task</button>
 							<button class="secondary" type="button" id="resetForm">Reset</button>
 						</div>
 					</form>
 					<div id="formMessage" aria-live="polite"></div>
 				</section>
 
-				<section class="panel" aria-labelledby="suggestTitle">
-					<h2 id="suggestTitle">AI Suggestion</h2>
-					<form id="suggestForm">
+				<section class="tool-panel" aria-labelledby="suggestTitle">
+					<div class="panel-heading">
+						<h2 id="suggestTitle">AI Draft</h2>
+					</div>
+					<form id="suggestForm" class="task-form">
 						<label>
 							Task Intent
 							<textarea id="suggestDescription" name="suggestDescription" required maxlength="12000">remind me to submit the quarterly report before Friday</textarea>
 						</label>
 						<div class="actions">
-							<button type="submit" id="suggestButton">Suggest</button>
+							<button type="submit" id="suggestButton">Suggest Task</button>
 							<button class="secondary" type="button" id="clearSuggestion">Clear</button>
 						</div>
 					</form>
 					<div id="suggestionOutput" aria-live="polite"></div>
 				</section>
 
-				<section class="panel" aria-labelledby="summaryTitle">
-					<h2 id="summaryTitle">Focus Plan</h2>
+				<section class="tool-panel" aria-labelledby="summaryTitle">
+					<div class="panel-heading">
+						<h2 id="summaryTitle">Focus Plan</h2>
+					</div>
 					<div class="actions">
 						<button type="button" id="summaryButton">Summarize Tasks</button>
 					</div>
 					<div id="summaryOutput" aria-live="polite"></div>
 				</section>
-			</div>
-
-			<section class="panel" aria-labelledby="taskListTitle">
-				<div class="task-toolbar">
-					<h2 id="taskListTitle">Tasks</h2>
-					<span class="task-count" id="taskCount">0 tasks</span>
-				</div>
-				<div class="task-controls" aria-label="Task list controls">
-					<label>
-						Status
-						<select id="statusFilter" name="statusFilter">
-							<option value="">All statuses</option>
-							<option value="TODO">TODO</option>
-							<option value="IN_PROGRESS">IN_PROGRESS</option>
-							<option value="DONE">DONE</option>
-						</select>
-					</label>
-					<label>
-						Priority
-						<select id="priorityFilter" name="priorityFilter">
-							<option value="">All priorities</option>
-							<option value="LOW">LOW</option>
-							<option value="MEDIUM">MEDIUM</option>
-							<option value="HIGH">HIGH</option>
-						</select>
-					</label>
-					<label>
-						Sort
-						<select id="taskSort" name="taskSort">
-							<option value="id">Created order</option>
-							<option value="dueDate">Due date</option>
-							<option value="priority">Priority</option>
-						</select>
-					</label>
-				</div>
-				<div id="taskList"></div>
-			</section>
+			</aside>
 		</main>
 	</div>
 
-	<script>
-		const taskForm = document.querySelector("#taskForm");
-		const suggestForm = document.querySelector("#suggestForm");
-		const taskList = document.querySelector("#taskList");
-		const taskCount = document.querySelector("#taskCount");
-		const statusLine = document.querySelector("#statusLine");
-		const formMessage = document.querySelector("#formMessage");
-		const suggestionOutput = document.querySelector("#suggestionOutput");
-		const summaryOutput = document.querySelector("#summaryOutput");
-		const summaryButton = document.querySelector("#summaryButton");
-		const statusFilter = document.querySelector("#statusFilter");
-		const priorityFilter = document.querySelector("#priorityFilter");
-		const taskSort = document.querySelector("#taskSort");
-
-		let latestSuggestion = null;
-
-		async function requestJson(url, options = {}) {
-			const response = await fetch(url, {
-				headers: {
-					"Content-Type": "application/json",
-					...(options.headers || {})
-				},
-				...options
-			});
-
-			if (response.status === 204) {
-				return null;
-			}
-
-			const payload = await response.json().catch(() => null);
-			if (!response.ok) {
-				throw payload || {
-					message: `Request failed with status ${response.status}`
-				};
-			}
-			return payload;
-		}
-
-		function showMessage(container, message, isError = false) {
-			container.innerHTML = "";
-			if (!message) {
-				return;
-			}
-			const notice = document.createElement("div");
-			notice.className = `notice${isError ? " error" : ""}`;
-			notice.textContent = message;
-			container.appendChild(notice);
-		}
-
-		function errorMessage(error) {
-			if (error && Array.isArray(error.fieldErrors) && error.fieldErrors.length > 0) {
-				return error.fieldErrors.map((fieldError) => `${fieldError.field}: ${fieldError.message}`).join("\\n");
-			}
-			return error && error.message ? error.message : "Request failed";
-		}
-
-		async function loadTasks() {
-			try {
-				const tasks = await requestJson(taskListUrl());
-				renderTasks(tasks);
-				statusLine.textContent = "Ready";
-			}
-			catch (error) {
-				statusLine.textContent = "Task load failed";
-				showMessage(taskList, errorMessage(error), true);
-			}
-		}
-
-		function taskListUrl() {
-			const params = new URLSearchParams();
-			if (statusFilter.value) {
-				params.set("status", statusFilter.value);
-			}
-			if (priorityFilter.value) {
-				params.set("priority", priorityFilter.value);
-			}
-			if (taskSort.value && taskSort.value !== "id") {
-				params.set("sort", taskSort.value);
-			}
-			const query = params.toString();
-			return query ? `/tasks?${query}` : "/tasks";
-		}
-
-		function renderTasks(tasks) {
-			taskCount.textContent = `${tasks.length} ${tasks.length === 1 ? "task" : "tasks"}`;
-			taskList.innerHTML = "";
-			if (tasks.length === 0) {
-				const empty = document.createElement("div");
-				empty.className = "empty-state";
-				empty.textContent = "No tasks yet.";
-				taskList.appendChild(empty);
-				return;
-			}
-
-			const table = document.createElement("table");
-			table.innerHTML = `
-				<thead>
-					<tr>
-						<th>Title</th>
-						<th>Due</th>
-						<th>Priority</th>
-						<th>Status</th>
-						<th>Action</th>
-					</tr>
-				</thead>
-				<tbody></tbody>
-			`;
-			const tbody = table.querySelector("tbody");
-			for (const task of tasks) {
-				const row = document.createElement("tr");
-				row.appendChild(cell("Title", taskTitle(task)));
-				row.appendChild(cell("Due", task.dueDate));
-				row.appendChild(cell("Priority", badge(task.priority, `priority-${task.priority.toLowerCase()}`)));
-				row.appendChild(cell("Status", badge(task.status, "status")));
-
-				const actionCell = document.createElement("td");
-				actionCell.dataset.label = "Action";
-				const actions = document.createElement("div");
-				actions.className = "actions";
-				if (task.status !== "DONE") {
-					const doneButton = document.createElement("button");
-					doneButton.className = "secondary";
-					doneButton.type = "button";
-					doneButton.textContent = "Mark Done";
-					doneButton.addEventListener("click", () => markTaskDone(task.id));
-					actions.appendChild(doneButton);
-				}
-				const deleteButton = document.createElement("button");
-				deleteButton.className = "danger";
-				deleteButton.type = "button";
-				deleteButton.textContent = "Delete";
-				deleteButton.addEventListener("click", () => deleteTask(task.id));
-				actions.appendChild(deleteButton);
-				actionCell.appendChild(actions);
-				row.appendChild(actionCell);
-
-				tbody.appendChild(row);
-			}
-			taskList.appendChild(table);
-		}
-
-		function taskTitle(task) {
-			const wrapper = document.createElement("div");
-			const title = document.createElement("strong");
-			title.textContent = task.title;
-			wrapper.appendChild(title);
-			if (task.description) {
-				const description = document.createElement("p");
-				description.style.color = "var(--muted)";
-				description.style.marginTop = "0.25rem";
-				description.textContent = task.description;
-				wrapper.appendChild(description);
-			}
-			return wrapper;
-		}
-
-		function cell(label, content) {
-			const td = document.createElement("td");
-			td.dataset.label = label;
-			if (content instanceof Node) {
-				td.appendChild(content);
-			}
-			else {
-				td.textContent = content;
-			}
-			return td;
-		}
-
-		function badge(text, className) {
-			const span = document.createElement("span");
-			span.className = `badge ${className}`;
-			span.textContent = text;
-			return span;
-		}
-
-		async function createTask(event) {
-			event.preventDefault();
-			const payload = {
-				title: document.querySelector("#title").value.trim(),
-				description: document.querySelector("#description").value.trim() || null,
-				dueDate: document.querySelector("#dueDate").value,
-				priority: document.querySelector("#priority").value,
-				status: document.querySelector("#status").value
-			};
-
-			try {
-				await requestJson("/tasks", {
-					method: "POST",
-					body: JSON.stringify(payload)
-				});
-				taskForm.reset();
-				document.querySelector("#priority").value = "MEDIUM";
-				document.querySelector("#status").value = "TODO";
-				showMessage(formMessage, "Task created.");
-				await loadTasks();
-			}
-			catch (error) {
-				showMessage(formMessage, errorMessage(error), true);
-			}
-		}
-
-		async function deleteTask(id) {
-			try {
-				await requestJson(`/tasks/${id}`, {
-					method: "DELETE"
-				});
-				await loadTasks();
-			}
-			catch (error) {
-				showMessage(formMessage, errorMessage(error), true);
-			}
-		}
-
-		async function markTaskDone(id) {
-			try {
-				await requestJson(`/tasks/${id}/status`, {
-					method: "PATCH",
-					body: JSON.stringify({ status: "DONE" })
-				});
-				await loadTasks();
-			}
-			catch (error) {
-				showMessage(formMessage, errorMessage(error), true);
-			}
-		}
-
-		async function summarizeTasks() {
-			summaryButton.disabled = true;
-			summaryButton.textContent = "Summarizing...";
-			try {
-				const response = await requestJson("/tasks/summary", {
-					method: "POST"
-				});
-				renderSummary(response);
-			}
-			catch (error) {
-				showMessage(summaryOutput, errorMessage(error), true);
-			}
-			finally {
-				summaryButton.disabled = false;
-				summaryButton.textContent = "Summarize Tasks";
-			}
-		}
-
-		function renderSummary(response) {
-			summaryOutput.innerHTML = "";
-			const wrapper = document.createElement("div");
-			wrapper.className = "summary-output";
-
-			const summary = document.createElement("p");
-			summary.textContent = response.summary;
-			wrapper.appendChild(summary);
-
-			const plan = document.createElement("ol");
-			for (const item of response.plan || []) {
-				const step = document.createElement("li");
-				step.textContent = item;
-				plan.appendChild(step);
-			}
-			wrapper.appendChild(plan);
-			summaryOutput.appendChild(wrapper);
-		}
-
-		async function suggestTask(event) {
-			event.preventDefault();
-			const description = document.querySelector("#suggestDescription").value.trim();
-			const button = document.querySelector("#suggestButton");
-			button.disabled = true;
-			button.textContent = "Suggesting...";
-			try {
-				latestSuggestion = await requestJson("/tasks/suggest", {
-					method: "POST",
-					body: JSON.stringify({ description })
-				});
-				renderSuggestion(latestSuggestion);
-			}
-			catch (error) {
-				latestSuggestion = null;
-				showMessage(suggestionOutput, errorMessage(error), true);
-			}
-			finally {
-				button.disabled = false;
-				button.textContent = "Suggest";
-			}
-		}
-
-		function renderSuggestion(suggestion) {
-			suggestionOutput.innerHTML = "";
-			const grid = document.createElement("div");
-			grid.className = "suggestion-grid";
-			const hasDueDate = Boolean(suggestion.dueDate);
-			for (const [label, value] of [
-				["Title", suggestion.title],
-				["Description", suggestion.description || ""],
-				["Due Date", suggestion.dueDate || "No due date"],
-				["Priority", suggestion.priority],
-				["Status", suggestion.status]
-			]) {
-				const row = document.createElement("div");
-				row.className = "suggestion-row";
-				const labelEl = document.createElement("span");
-				labelEl.textContent = label;
-				const valueEl = document.createElement("span");
-				valueEl.textContent = value;
-				row.append(labelEl, valueEl);
-				grid.appendChild(row);
-			}
-
-			const actions = document.createElement("div");
-			actions.className = "actions";
-			const createButton = document.createElement("button");
-			createButton.type = "button";
-			createButton.textContent = "Create Task";
-			createButton.disabled = !hasDueDate;
-			if (hasDueDate) {
-				createButton.addEventListener("click", () => createTaskFromSuggestion(createButton));
-			}
-			const useButton = document.createElement("button");
-			useButton.className = "secondary";
-			useButton.type = "button";
-			useButton.textContent = "Edit in Form";
-			useButton.addEventListener("click", fillFormFromSuggestion);
-			actions.append(createButton, useButton);
-			if (!hasDueDate) {
-				const note = document.createElement("div");
-				note.className = "notice";
-				note.textContent = "Add a due date in the task form before creating this task.";
-				grid.appendChild(note);
-			}
-			grid.appendChild(actions);
-			suggestionOutput.appendChild(grid);
-		}
-
-		async function createTaskFromSuggestion(button) {
-			if (!latestSuggestion) {
-				return;
-			}
-			if (!latestSuggestion.dueDate) {
-				renderSuggestion(latestSuggestion);
-				return;
-			}
-
-			button.disabled = true;
-			button.textContent = "Creating...";
-			const payload = {
-				title: latestSuggestion.title,
-				description: latestSuggestion.description || null,
-				dueDate: latestSuggestion.dueDate,
-				priority: latestSuggestion.priority,
-				status: latestSuggestion.status
-			};
-
-			try {
-				await requestJson("/tasks", {
-					method: "POST",
-					body: JSON.stringify(payload)
-				});
-				latestSuggestion = null;
-				suggestionOutput.innerHTML = "";
-				showMessage(suggestionOutput, "Task created from suggestion.");
-				await loadTasks();
-			}
-			catch (error) {
-				showMessage(suggestionOutput, errorMessage(error), true);
-				button.disabled = false;
-				button.textContent = "Create Task";
-			}
-		}
-
-		function fillFormFromSuggestion() {
-			if (!latestSuggestion) {
-				return;
-			}
-			document.querySelector("#title").value = latestSuggestion.title || "";
-			document.querySelector("#description").value = latestSuggestion.description || "";
-			document.querySelector("#dueDate").value = latestSuggestion.dueDate || "";
-			document.querySelector("#priority").value = latestSuggestion.priority || "MEDIUM";
-			document.querySelector("#status").value = latestSuggestion.status || "TODO";
-			showMessage(formMessage, "Suggestion copied into the task form.");
-		}
-
-		taskForm.addEventListener("submit", createTask);
-		suggestForm.addEventListener("submit", suggestTask);
-		summaryButton.addEventListener("click", summarizeTasks);
-		statusFilter.addEventListener("change", loadTasks);
-		priorityFilter.addEventListener("change", loadTasks);
-		taskSort.addEventListener("change", loadTasks);
-		document.querySelector("#resetForm").addEventListener("click", () => {
-			taskForm.reset();
-			document.querySelector("#priority").value = "MEDIUM";
-			document.querySelector("#status").value = "TODO";
-			showMessage(formMessage, "");
-		});
-		document.querySelector("#clearSuggestion").addEventListener("click", () => {
-			latestSuggestion = null;
-			suggestionOutput.innerHTML = "";
-		});
-
-		loadTasks();
-	</script>
+	<script type="module" src="/app.js"></script>
 </body>
 </html>

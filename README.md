@@ -1,8 +1,8 @@
 # Eulerity Task Manager
 
 A small Java 17 Spring Boot personal task manager with H2 in-memory persistence,
-explicit REST endpoints, a minimal static UI, and an optional OpenAI-backed task
-suggestion and task-summary endpoint.
+explicit REST endpoints, a refined static dashboard UI, and optional
+OpenAI-backed task suggestion and task-summary endpoints.
 
 The application runs locally without external services. OpenAI configuration is
 only required when calling AI endpoints that need model output.
@@ -465,8 +465,9 @@ only for local manual verification:
 - Automated tests mock OpenAI boundaries and do not call the live provider.
   Live provider behavior is covered by the manual smoke checklist above when a
   local API key is available.
-- The UI is intentionally minimal: it supports the required local workflows but
-  is not a production design system or full frontend application.
+- The UI is intentionally lightweight: it is a static HTML/CSS/JavaScript
+  dashboard for local workflows, not a production design system or full
+  frontend application.
 - OpenAI transport failures are not retried. Only invalid model output for task
   suggestions is retried once with a specific validation reason.
 - There is no circuit breaker, fallback AI response, or explicit OpenAI timeout

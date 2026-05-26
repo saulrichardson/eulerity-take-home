@@ -25,7 +25,8 @@ rationale, caveats, lessons, and dated decisions.
 
 ## Stack
 
-- frontend: static HTML/CSS/JavaScript served by Spring Boot
+- frontend: static HTML/CSS/JavaScript served by Spring Boot, organized as
+  `index.html`, `styles.css`, `app.js`, `api.js`, and `ui.js`
 - backend: Java 17, Spring Boot 4.0.6, Spring Web MVC
 - data store: H2 in-memory database through Spring Data JPA
 - auth or policy model: none; authentication and authorization are out of scope
@@ -56,6 +57,9 @@ Describe the current system shape at the level future agents need to act.
   in memory
 - list behavior: `GET /tasks` can filter by `status` and `priority`, and sort
   by `id`, `dueDate`, or priority order (`HIGH`, `MEDIUM`, `LOW`)
+- static UI behavior: the dashboard centers the task list, supports create,
+  full edit/update through `PUT /tasks/{id}`, delete, status completion,
+  filtering/sorting, AI task drafts, and summary/focus-plan output
 - completion behavior: `PATCH /tasks/{id}/status` updates only task status;
   broader partial-update behavior is intentionally not exposed
 - AI suggestion behavior: suggestions are drafts and may omit `dueDate` when
@@ -228,3 +232,4 @@ should remember.
 - `records/2026-05-25-ai-token-preflight.md`
 - `records/2026-05-25-ai-suggestion-openai-polish.md`
 - `records/2026-05-25-ai-due-date-rule-dsl.md`
+- `records/2026-05-25-frontend-dashboard-redesign.md`
