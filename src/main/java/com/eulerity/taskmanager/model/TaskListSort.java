@@ -25,8 +25,4 @@ public enum TaskListSort {
 		}
 		return Optional.empty();
 	}
-
-	public String queryValue() {
-		return this.queryValue;
-	}
 }

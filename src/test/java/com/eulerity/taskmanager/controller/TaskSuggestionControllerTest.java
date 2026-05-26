@@ -68,6 +68,27 @@ class TaskSuggestionControllerTest {
 	}
 
 	@Test
+	void suggestTaskCanReturnNoDateDraft() throws Exception {
+		when(this.taskAiClient.suggestTask(any(AiTaskSuggestionPrompt.class)))
+			.thenReturn(new TaskSuggestionResponse("Review launch notes",
+					"Review launch notes and capture follow-up items.", null, TaskPriority.MEDIUM, TaskStatus.TODO));
+
+		this.mockMvc.perform(post("/tasks/suggest")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "description": "review launch notes and capture follow-up items"
+						}
+						"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.title").value("Review launch notes"))
+			.andExpect(jsonPath("$.description").value("Review launch notes and capture follow-up items."))
+			.andExpect(jsonPath("$.dueDate").isEmpty())
+			.andExpect(jsonPath("$.priority").value("MEDIUM"))
+			.andExpect(jsonPath("$.status").value("TODO"));
+	}
+
+	@Test
 	void suggestTaskReturnsStructuredErrorWhenOpenAiConfigurationIsMissing() throws Exception {
 		when(this.tokenCounter.countTaskSuggestionInputTokens(any(AiTaskSuggestionPrompt.class)))
 			.thenThrow(new MissingOpenAiConfigurationException());

@@ -21,6 +21,7 @@ import com.eulerity.taskmanager.dto.TaskResponse;
 import com.eulerity.taskmanager.dto.TaskStatusUpdateRequest;
 import com.eulerity.taskmanager.dto.TaskUpdateRequest;
 import com.eulerity.taskmanager.model.Task;
+import com.eulerity.taskmanager.model.TaskListSort;
 import com.eulerity.taskmanager.model.TaskPriority;
 import com.eulerity.taskmanager.model.TaskStatus;
 import com.eulerity.taskmanager.repository.TaskRepository;
@@ -61,7 +62,7 @@ class TaskServiceTest {
 				TaskStatus.IN_PROGRESS);
 		when(this.taskRepository.findAll()).thenReturn(List.of(later, earlier));
 
-		List<TaskResponse> responses = this.taskService.listTasks();
+		List<TaskResponse> responses = this.taskService.listTasks(null, null, TaskListSort.ID);
 
 		assertThat(responses).hasSize(2);
 		assertThat(responses.get(0).title()).isEqualTo("Plan sprint");

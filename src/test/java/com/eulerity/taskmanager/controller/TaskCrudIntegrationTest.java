@@ -245,6 +245,16 @@ class TaskCrudIntegrationTest {
 	}
 
 	@Test
+	void invalidSortReturnsStructuredBadRequest() throws Exception {
+		this.mockMvc.perform(get("/tasks").param("sort", "createdAt"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.status").value(400))
+			.andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+			.andExpect(jsonPath("$.message")
+				.value("Unsupported sort value 'createdAt'. sort must be one of id, dueDate, or priority"));
+	}
+
+	@Test
 	void overlongTitleReturnsStructuredValidationError() throws Exception {
 		this.mockMvc.perform(post("/tasks")
 				.contentType(MediaType.APPLICATION_JSON)

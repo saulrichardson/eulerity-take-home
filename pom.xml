@@ -30,7 +30,6 @@
 		<java.version>17</java.version>
 		<maven.compiler.release>17</maven.compiler.release>
 		<openai-java.version>4.37.0</openai-java.version>
-		<selenium-java.version>4.44.0</selenium-java.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -69,12 +68,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.seleniumhq.selenium</groupId>
-			<artifactId>selenium-java</artifactId>
-			<version>${selenium-java.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

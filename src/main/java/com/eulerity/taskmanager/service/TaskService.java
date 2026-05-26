@@ -34,11 +34,6 @@ public class TaskService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<TaskResponse> listTasks() {
-		return listTasks(null, null, TaskListSort.ID);
-	}
-
-	@Transactional(readOnly = true)
 	public List<TaskResponse> listTasks(TaskStatus status, TaskPriority priority, TaskListSort sort) {
 		return this.taskRepository.findAll()
 			.stream()
@@ -78,7 +73,7 @@ public class TaskService {
 	}
 
 	private void apply(Task task, String title, String description, java.time.LocalDate dueDate,
-			com.eulerity.taskmanager.model.TaskPriority priority, com.eulerity.taskmanager.model.TaskStatus status) {
+			TaskPriority priority, TaskStatus status) {
 		task.setTitle(title);
 		task.setDescription(description);
 		task.setDueDate(dueDate);

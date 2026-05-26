@@ -30,11 +30,17 @@ focused `PATCH /tasks/{id}/status` endpoint.
 
 ## Evidence
 
-- `TaskSuggestionUiSmokeTest` covers the no-date AI draft flow through a real
-  browser and now also covers create, edit, mark done, and delete through the
-  dashboard task rows.
-- `StaticUiLimitsTest` verifies frontend field limits and the no-date direct
-  create guard across the split static files.
+- Manual browser verification covered the no-date AI draft flow through the
+  real local dashboard, along with create, edit, mark done, delete,
+  filtering/sorting, and summary rendering.
+- `StaticUiLimitsTest` verifies frontend field limits, the no-date direct
+  create guard, and the edit-in-form copy path across the split static files.
+- `StaticUiControllerTest` verifies `GET /` serves the static dashboard without
+  requiring browser tooling in the committed `./mvnw test` suite.
+
+The earlier committed Selenium/Chrome smoke test was removed from the default
+automated suite so `./mvnw test` stays deterministic on a clean Java/Maven
+environment without depending on local browser availability.
 
 ## Future Guidance
 
