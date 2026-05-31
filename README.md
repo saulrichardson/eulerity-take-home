@@ -1,5 +1,10 @@
 # Eulerity Task Manager
 
+The Codex build session that drove this project is included at
+[docs/codex-session/eulerity-codex-session.md](docs/codex-session/eulerity-codex-session.md).
+It shows the prompt, review, debugging, and verification loop used to build the
+submission.
+
 Eulerity Task Manager is a local Java 17 Spring Boot application for managing
 personal tasks and using OpenAI to turn plain-language intent into structured
 task drafts. It also provides an AI focus-plan endpoint that summarizes the
@@ -12,11 +17,6 @@ The app is designed for a reviewer to understand quickly:
 - ask AI for a structured task suggestion from natural language
 - ask AI for a task-list summary and focus plan
 - run everything locally with H2 in-memory persistence
-
-The Codex build session that drove this project is included at
-[docs/codex-session/eulerity-codex-session.md](docs/codex-session/eulerity-codex-session.md).
-It shows the prompt, review, debugging, and verification loop used to build the
-submission.
 
 ## Product Walkthrough
 
